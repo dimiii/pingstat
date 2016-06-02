@@ -46,9 +46,7 @@ class PingDaemon
     chunkSize = nHosts / @pingFrequency
     chunks = @hostStorage.values.each_slice(chunkSize).to_a
 
-    0..chunks.length do |sec|
-      merge(chunks[sec]) unless chunks.at sec
-    end
+    (0...chunks.length).each {|sec| merge(chunks[sec]) }
   end
 
   def merge(hostsToSchedule)

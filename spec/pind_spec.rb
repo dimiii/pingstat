@@ -27,4 +27,16 @@ describe 'Ping Daemon' do
     expect(pingd.tasks.values.size).to eq 0
   end
 
+  it 'restores tasks from repository' do
+    hosts = InMemory.new
+    (1..182).each do |i|
+      hosts.add "0.0.0.#{i}"
+    end
+    pingd = PingDaemon.new(hosts)
+
+    expect(pingd.schedule[0].size).to eq 5
+    expect(pingd.schedule[1].size).to eq 3
+    expect(pingd.schedule[2].size).to eq 3
+  end
+
 end
