@@ -11,6 +11,7 @@ class PingIO
   ICMP_ECHO      = 8
   ICMP_SUBCODE   = 0
 
+  # @param hostStorage [Storage]
   def initialize(hostStorage)
     @hostStorage = hostStorage
     @selector = NIO::Selector.new
@@ -50,7 +51,6 @@ class PingIO
 
   def pingSendLoop
     @logger.info 'Start ping loop'
-    puts "lol #{Thread.current} #{@selector} wtf"
 
     opSecond = 0
     @scheduler.every '1s' do
@@ -91,15 +91,14 @@ class PingIO
 
     monitor = @selector.register(socket, :r)
     pingTime = Time.now
-    socket.sendmsg_nonblock(msg)
     monitor.value = proc { onReceive(socket, pingTime, task.host) }
-    puts "SND #{Time.now.to_f * 1000} #{task.host}"
+    socket.sendmsg_nonblock(msg)
   end
 
   def onReceive(socket, pingTime, host)
-    data = socket.recvfrom_nonblock(42) # size does not matter
     rtt = (Time.now() - pingTime) * 1000
-    puts "RCV #{Time.now.to_f * 1000} #{host} #{rtt}"
+    @hostStorage.saveProbe(PingResult.new(host, pingTime, rtt))
+
     @selector.deregister(socket)
     socket.close
   rescue EOFError

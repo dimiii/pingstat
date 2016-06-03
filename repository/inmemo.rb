@@ -1,8 +1,9 @@
+require_relative 'interface'
+require_relative '../domain'
 
-class InMemory
+class InMemory < Storage
   def initialize
     @hosts = []
-
   end
 
   def add(host)
@@ -17,8 +18,8 @@ class InMemory
     @hosts
   end
 
-  def saveProbe(host, pingResult)
-
+  def saveProbe(pingResult)
+    puts "RCV #{Time.now.to_f * 1000} #{pingResult}"
   end
 
   def rtt(host, beginPeriod, endPeriod)
