@@ -1,24 +1,21 @@
 require_relative 'repository/inmemo'
-
-class PingTask
-  attr_reader :secOfMin, :host
-
-  def initialize(host, secOfMin = Time.now.sec())
-    @secOfMin = secOfMin % 60
-    @host = host
-  end
-end
+require_relative 'io'
+require_relative 'domain'
 
 class PingDaemon
   attr_reader :tasks, :schedule
 
-  def initialize(hostStorage = InMemory.new, pingFrequency = 60)
+  def initialize(hostStorage: InMemory.new, pingIO: PingIO.new(hostStorage), pingFrequency: 60, operated: false)
+    raise 'Expected number of seconds > 1 as a ping frequency' if pingFrequency < 2
     @hostStorage = hostStorage
     @pingFrequency = pingFrequency # in seconds
     @tasks  = Hash.new   # host -> PingTask
     @schedule = Hash.new # sec -> [PingTask]
     (0...pingFrequency).each {|sec| @schedule[sec] = [] }
     fill
+
+    @pingIO = pingIO
+    @pingIO.operate(@schedule, @pingFrequency) if operated
   end
 
   def add(host)
@@ -37,6 +34,10 @@ class PingDaemon
 
   def summary(host, beginPeriod, endPeriod)
     raise "TBD"
+  end
+
+  def terminate
+    @pingIO.terminate
   end
 
   def fill

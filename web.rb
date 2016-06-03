@@ -7,7 +7,7 @@ class RestResource < Sinatra::Base
   set :logging, true
   set :port, 8080
 
-  def initialize(app = nil, service = PingDaemon.new)
+  def initialize(app = nil, service: PingDaemon.new(operated: true))
     super(app)
     @service = service
   end
@@ -45,6 +45,4 @@ class RestResource < Sinatra::Base
 
   run! if __FILE__ == $0
 end
-
-RestResource.new
 

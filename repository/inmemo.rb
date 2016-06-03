@@ -2,6 +2,7 @@
 class InMemory
   def initialize
     @hosts = []
+
   end
 
   def add(host)
@@ -14,5 +15,13 @@ class InMemory
 
   def values
     @hosts
+  end
+
+  def saveProbe(host, pingResult)
+
+  end
+
+  def rtt(host, beginPeriod, endPeriod)
+
   end
 end

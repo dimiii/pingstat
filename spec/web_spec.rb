@@ -1,13 +1,13 @@
 require 'rspec'
+require 'rack/test'
 
 require_relative '../web'
-require 'rack/test'
 
 describe 'Web application' do
   include Rack::Test::Methods
 
   def app
-    RestResource.new
+    RestResource.new(service: PingDaemon.new)
   end
 
   it 'should be alive' do

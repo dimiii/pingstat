@@ -1,7 +1,8 @@
 require 'rspec'
+require 'rack/test'
 
 require_relative '../pingd'
-require 'rack/test'
+require_relative '../domain'
 
 describe 'Ping Daemon' do
   include Rack::Test::Methods
@@ -32,7 +33,7 @@ describe 'Ping Daemon' do
     (1..182).each do |i|
       hosts.add "0.0.0.#{i}"
     end
-    pingd = PingDaemon.new(hosts)
+    pingd = PingDaemon.new(hostStorage: hosts)
 
     expect(pingd.schedule[0].size).to eq 5
     expect(pingd.schedule[1].size).to eq 3
