@@ -4,6 +4,8 @@ require 'socket'
 require 'logger'
 require 'thread'
 
+require_relative 'repository/interface'
+
 include Socket::Constants
 class PingIO
 
@@ -104,6 +106,8 @@ class PingIO
   rescue EOFError
     @selector.deregister(socket)
     socket.close
+  rescue Storage::MissingHostError
+    @logger.error "Unknown host #{host}, chekck db consistency"
   end
 
   def checksum(msg)

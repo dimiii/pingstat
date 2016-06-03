@@ -18,16 +18,18 @@ describe 'Ping IO' do
               '195.191.207.40', '31.7.57.13', '199.7.177.218', '69.10.25.46', '67.21.232.223', '178.162.238.136', '89.238.130.247',
               '95.211.143.200', '199.47.217.179', '69.65.13.216']
 
-  it 'operates and terminates' do
+  it 'sends something' do
     raise 'Must run as root, because raw sockets are utilized' unless Process.uid == 0
 
     schedule = { 0 => testList.push('1.2.3.4').map { |host| PingTask.new(host, 0) } }
-    storage = InMemory.new
+    storage = InMemory.new(testList)
 
     io = PingIO.new(storage)
     Thread.new { io.operate(schedule, 4) }
-    sleep 6
-    puts storage.values.size
+    startTime = Time.now
+    sleep 2
+    expect(storage.rtt('8.8.8.8', startTime, Time.now).size).to eq 1
+    io.terminate
   end
 
 

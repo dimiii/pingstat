@@ -1,5 +1,8 @@
 class Storage
   MESS = 'SYSTEM ERROR: method missing'
+  class MissingHostError < StandardError
+
+  end
 
   def method_one; raise MESS; end
   def method_two; raise MESS; end
