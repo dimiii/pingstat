@@ -20,7 +20,7 @@ class InMemory < Storage
     @hosts.delete host
   end
 
-  def values
+  def hosts
     @hosts
   end
 

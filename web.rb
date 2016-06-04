@@ -42,7 +42,7 @@ class RestResource < Sinatra::Base
   end
 
   get '/pingstat/op-hosts' do
-    @service.tasks.values.to_a
+    @service.tasks.hosts.to_a
   end
 
   run! if __FILE__ == $0

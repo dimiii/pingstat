@@ -47,11 +47,11 @@ class PingDaemon
   end
 
   def fill
-    nHosts = @hostStorage.values.size
+    nHosts = @hostStorage.hosts.size
     return if nHosts == 0
 
     chunkSize = nHosts / @pingFrequency
-    chunks = @hostStorage.values.each_slice(chunkSize).to_a
+    chunks = @hostStorage.hosts.each_slice(chunkSize).to_a
 
     (0...chunks.length).each {|sec| merge(chunks[sec]) }
   end

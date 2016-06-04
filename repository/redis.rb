@@ -23,7 +23,7 @@ class InRedis < Storage
     @driver.srem("operated-hosts", host)
   end
 
-  def values
+  def hosts
     @driver.smembers("operated-hosts")
   end
 

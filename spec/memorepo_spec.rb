@@ -12,14 +12,14 @@ describe 'InMemory Repository' do
   it 'remembers hosts' do
     repo = InMemory.new
     repo.add('8.8.8.8')
-    expect(repo.values.size).to_not eq 0
+    expect(repo.hosts.size).to_not eq 0
   end
 
   it 'forgets hosts' do
     repo = InMemory.new
     repo.add('8.8.8.8')
     repo.delete('8.8.8.8')
-    expect(repo.values.size).to eq 0
+    expect(repo.hosts.size).to eq 0
   end
 
   it 'collects stats' do

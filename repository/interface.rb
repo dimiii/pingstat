@@ -11,7 +11,7 @@ class Storage
 
   def add(host); raise MESS; end
   def delete(host); raise MESS; end
-  def values; raise MESS; end
+  def hosts; raise MESS; end
 
   # @param pingResult [PingResult]
   def saveProbe(pingResult); raise MESS; end

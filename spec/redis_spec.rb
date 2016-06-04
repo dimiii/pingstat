@@ -21,14 +21,14 @@ describe 'Redis Repository' do
     repo = InRedis.new(Redis.new)
     repo.add('8.8.8.8')
 
-    expect(repo.values.size).to eq 1
+    expect(repo.hosts.size).to eq 1
   end
 
   it 'forgets hosts' do
     repo = InRedis.new(Redis.new)
     repo.add('8.8.8.8')
     repo.delete('8.8.8.8')
-    expect(repo.values.size).to eq 0
+    expect(repo.hosts.size).to eq 0
   end
 
   it 'collects stats' do
