@@ -19,7 +19,9 @@ describe 'Ping IO' do
               '95.211.143.200', '199.47.217.179', '69.65.13.216']
 
   it 'sends something' do
-    raise 'Must run as root, because raw sockets are utilized' unless Process.uid == 0
+    if Process.uid > 0 and (/darwin/ =~ RUBY_PLATFORM).nil?
+      raise 'Must run as root or with CAP_NET_RAW+eip capability, because raw sockets are utilized'
+    end
 
     schedule = { 0 => testList.push('1.2.3.4').map { |host| PingTask.new(host, 0) } }
     storage = InMemory.new(testList)
@@ -32,6 +34,9 @@ describe 'Ping IO' do
     io.terminate
   end
 
-
-
+  it 'operates and terminates' do
+    io = PingIO.new(InMemory.new)
+    Thread.new { io.operate({}, 1) }
+    io.terminate
+  end
 end

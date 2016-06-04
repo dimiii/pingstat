@@ -8,6 +8,9 @@ class InMemory < Storage
     hosts.each { |host| add(host) }
   end
 
+  def terminate
+  end
+
   def add(host)
     @hosts.push host
     @rtt[host] = Hash.new unless @rtt.key? host

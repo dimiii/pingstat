@@ -3,6 +3,7 @@ require 'nio'
 require 'socket'
 require 'logger'
 require 'thread'
+require 'hamster'
 
 require_relative 'repository/interface'
 
@@ -15,7 +16,12 @@ class PingIO
 
   # @param hostStorage [Storage]
   def initialize(hostStorage)
+    raise 'Windows OS is not tested and not supported' if (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
+
+    @isMac = (/darwin/ =~ RUBY_PLATFORM) != nil
     @hostStorage = hostStorage
+    @trashbag = Hamster::Hash.new
+
     @selector = NIO::Selector.new
     @scheduler = Rufus::Scheduler.new(:max_work_threads => 1)
     @logger = Logger.new(STDERR)
@@ -25,12 +31,11 @@ class PingIO
     @pingFrequency = pingFrequency
     @schedule = schedule
 
-    @pingThread = Thread.new {  pingSendLoop } if @pingThread.nil?
+    @pingThread = Thread.new { pingSendLoop } if @pingThread.nil?
     @replyThread =  Thread.new { replyReceiveLoop } if @replyThread.nil?
 
     @pingThread.join()
     @replyThread.join()
-
   end
 
   def terminate
@@ -46,10 +51,9 @@ class PingIO
       @logger.error 'Failed close nio4r selector'
     end
 
-    @pingThread.terminate
-    @replyThread.terminate
+    @pingThread.terminate unless @pingThread.nil?
+    @replyThread.terminate unless @replyThread.nil?
   end
-
 
   def pingSendLoop
     @logger.info 'Start ping loop'
@@ -60,6 +64,8 @@ class PingIO
 
       opSecond += 1
       opSecond %= @pingFrequency
+
+      #cleanup
     end
 
     @scheduler.join
@@ -84,7 +90,8 @@ class PingIO
   end
 
   def ping(task)
-    socket = Socket.new(PF_INET, SOCK_RAW, IPPROTO_ICMP)
+    # see https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man4/icmp.4.html
+    socket = Socket.new(PF_INET, @isMac ? SOCK_DGRAM : SOCK_RAW, IPPROTO_ICMP)
     sockaddr = Socket.sockaddr_in(1984, task.host) # port does not matter
     socket.connect(sockaddr)
 
@@ -95,19 +102,18 @@ class PingIO
     pingTime = Time.now
     monitor.value = proc { onReceive(socket, pingTime, task.host) }
     socket.sendmsg_nonblock(msg)
+
+    @trashbag = @trashbag.put(socket, 0)
   end
 
   def onReceive(socket, pingTime, host)
     rtt = (Time.now() - pingTime) * 1000
     @hostStorage.saveProbe(PingResult.new(host, pingTime, rtt))
-
-    @selector.deregister(socket)
-    socket.close
+    release(socket)
   rescue EOFError
-    @selector.deregister(socket)
-    socket.close
+    release(socket)
   rescue Storage::MissingHostError
-    @logger.error "Unknown host #{host}, chekck db consistency"
+    @logger.error "Unknown host #{host}, check db consistency"
   end
 
   def checksum(msg)
@@ -127,6 +133,19 @@ class PingIO
     return (~((check >> 16) + check) & 0xffff)
   end
 
-  private :pingSendLoop, :replyReceiveLoop, :ping, :onReceive, :checksum
+  def cleanup
+    @trashbag = @trashbag.map {|socket, ttl| [socket, ttl + 1] }
+    @trashbag.each do |socket, ttl|
+      release(socket) if ttl > 30
+    end
+  end
+
+  def release(socket)
+    @trashbag = @trashbag.delete socket
+    @selector.deregister socket
+    socket.close
+  end
+
+  private :pingSendLoop, :replyReceiveLoop, :ping, :onReceive, :checksum, :cleanup, :release
 
 end

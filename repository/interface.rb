@@ -4,6 +4,8 @@ class Storage
 
   end
 
+  def terminate; raise MESS; end;
+
   def method_one; raise MESS; end
   def method_two; raise MESS; end
 
