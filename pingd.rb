@@ -1,3 +1,5 @@
+require 'logger'
+
 require_relative 'repository/inmemo'
 require_relative 'io'
 require_relative 'domain'
@@ -7,15 +9,18 @@ class PingDaemon
 
   def initialize(hostStorage: InMemory.new, pingIO: PingIO.new(hostStorage), pingFrequency: 60, operated: false)
     raise 'Expected number of seconds > 1 as a ping frequency' if pingFrequency < 2
+
     @hostStorage = hostStorage
     @pingFrequency = pingFrequency # in seconds
+    @limitOfTasks, _ = Process.getrlimit(:NOFILE)
     @tasks  = Hash.new   # host -> PingTask
     @schedule = Hash.new # sec -> [PingTask]
     (0...pingFrequency).each {|sec| @schedule[sec] = [] }
     fill
 
     @pingIO = pingIO
-    @pingIO.operate(@schedule, @pingFrequency) if operated
+    @pingIO.operate(@schedule, @pingFrequency, @limitOfTasks) if operated
+    @logger = Logger.new(STDERR)
   end
 
   def add(host)
@@ -38,6 +43,7 @@ class PingDaemon
 
   def terminate
     @pingIO.terminate
+    @hostStorage.terminate
   end
 
   def fill

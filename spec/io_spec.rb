@@ -39,4 +39,18 @@ describe 'Ping IO' do
     Thread.new { io.operate({}, 1) }
     io.terminate
   end
+
+  it 'traces limits on count of tasks' do
+    io = PingIO.new(InMemory.new)
+    trashbag = Hamster::Hash.new
+    (0..5).each do |i|
+      sock = double("sock_#{i}")
+      trashbag = trashbag.put(sock, i * 10)
+      allow(sock).to receive(:close)
+    end
+
+    expect(io.cleanupOldest(trashbag,  3).size).to eq 1
+    expect(io.cleanupOldest(trashbag,  4).size).to eq 2
+  end
 end
+

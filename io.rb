@@ -15,10 +15,12 @@ class PingIO
   ICMP_SUBCODE   = 0
 
   # @param hostStorage [Storage]
-  def initialize(hostStorage)
+  def initialize(hostStorage, taskTimeout = 30)
     raise 'Windows OS is not tested and not supported' if (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
 
     @isMac = (/darwin/ =~ RUBY_PLATFORM) != nil
+    @taskTimeout = taskTimeout
+
     @hostStorage = hostStorage
     @trashbag = Hamster::Hash.new
 
@@ -27,7 +29,10 @@ class PingIO
     @logger = Logger.new(STDERR)
   end
 
-  def operate(schedule, pingFrequency)
+  def operate(schedule, pingFrequency, limitOfTasks = 1024)
+    @logger.info "Start pinging each #{pingFrequency} secs with max #{limitOfTasks / 2} hosts per second"
+
+    @limitOfTasks = limitOfTasks
     @pingFrequency = pingFrequency
     @schedule = schedule
 
@@ -53,6 +58,8 @@ class PingIO
 
     @pingThread.terminate unless @pingThread.nil?
     @replyThread.terminate unless @replyThread.nil?
+
+    @logger.info 'Terminated'
   end
 
   def pingSendLoop
@@ -110,8 +117,10 @@ class PingIO
     rtt = (Time.now() - pingTime) * 1000
     @hostStorage.saveProbe(PingResult.new(host, pingTime, rtt))
     release(socket)
+    @trashbag = @trashbag.delete socket
   rescue EOFError
     release(socket)
+    @trashbag = @trashbag.delete socket
   rescue Storage::MissingHostError
     @logger.error "Unknown host #{host}, check db consistency"
   end
@@ -134,16 +143,36 @@ class PingIO
   end
 
   def cleanup
-    @trashbag = @trashbag.map {|socket, ttl| [socket, ttl + 1] }
+    outdated = []
     @trashbag.each do |socket, ttl|
-      release(socket) if ttl > 30
+      if ttl > @taskTimeout
+        outdated << socket
+        release(socket)
+      end
     end
+    @trashbag = @trashbag.except(*outdated)
+
+    @trashbag = cleanupOldest(@trashbag, @limitOfTasks)
+
+    @trashbag = @trashbag.map {|socket, ttl| [socket, ttl + 1] }
   end
 
   def release(socket)
-    @trashbag = @trashbag.delete socket
     @selector.deregister socket
     socket.close
+  end
+
+  def cleanupOldest(trashbag, limit)
+    reserve = limit / 2 - trashbag.size
+    if reserve < 0
+      flatten =  trashbag.sort_by { |_, ttl| ttl }.flatten(1)
+      outdatedIdx = (0...flatten.size).select {|n| n.even? }.to_a[reserve..-1]
+      outdated =  flatten.values_at(*outdatedIdx)
+      trashbag = trashbag.except(*outdated)
+      outdated.each { |socket| release(socket) }
+    end
+
+    trashbag
   end
 
   private :pingSendLoop, :replyReceiveLoop, :ping, :onReceive, :checksum, :cleanup, :release
