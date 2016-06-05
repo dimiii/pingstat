@@ -26,6 +26,7 @@ class PingDaemon
   def add(host)
     merge([host])
     @hostStorage.add host
+    @logger.info "Added host #{host} to monitoring"
   end
 
   def delete(host)
@@ -35,6 +36,7 @@ class PingDaemon
     @tasks.delete host
     @schedule[task.secOfMin].delete task
     @hostStorage.delete host
+    @logger.info "Delete host #{host} from monitoring"
   end
 
   def summary(host, beginPeriod, endPeriod)
@@ -52,7 +54,7 @@ class PingDaemon
     return if hosts.empty?
 
     chunkSize = hosts.size / @pingFrequency
-    chunks = hosts.each_slice(chunkSize).to_a
+    chunks = hosts.each_slice(chunkSize == 0 ? 1 : chunkSize).to_a
 
     (0...chunks.length).each {|sec| merge(chunks[sec]) }
   end

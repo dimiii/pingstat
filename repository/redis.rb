@@ -21,15 +21,15 @@ class InRedis < Storage
   end
 
   def add(host)
-    @driver.sadd("operated-hosts", host)
+    @driver.sadd('operated-hosts', host)
   end
 
   def delete(host)
-    @driver.srem("operated-hosts", host)
+    @driver.srem('operated-hosts', host)
   end
 
   def hosts
-    @driver.smembers("operated-hosts")
+    @driver.smembers('operated-hosts')
   end
 
   def saveProbe(pingResult)
@@ -37,9 +37,6 @@ class InRedis < Storage
   end
 
   def rtt(host, beginPeriod, endPeriod)
-    beginPeriod = beginPeriod.utc() unless beginPeriod.nil?
-    endPeriod = endPeriod.utc() unless endPeriod.nil?
-
     @driver.zrangebyscore(rttKey(host), beginPeriod || '-inf', endPeriod || '+inf')
            .map { |tsv| extractRtt(tsv) }
   end

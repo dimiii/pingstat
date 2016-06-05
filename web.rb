@@ -1,15 +1,17 @@
 require 'sinatra/base'
 require 'ipaddress'
 require 'json'
+require 'redis'
 
 require_relative 'pingd'
+require_relative 'repository/redis'
 
 
 class RestResource < Sinatra::Base
   set :logging, true
   set :port, 8080
 
-  def initialize(app = nil, service: PingDaemon.new(hostStorage:Redis.new, operated: true))
+  def initialize(app = nil, service: PingDaemon.new(hostStorage: InRedis.new(Redis.new), operated: true))
     super(app)
     @service = service
   end
@@ -49,7 +51,7 @@ class RestResource < Sinatra::Base
   end
 
   get '/pingstat/op-hosts' do
-    @service.tasks.hosts.to_a
+    @service.tasks.keys.to_json
   end
 
   run! if __FILE__ == $0

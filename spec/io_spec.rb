@@ -28,9 +28,9 @@ describe 'Ping IO' do
 
     io = PingIO.new(storage)
     Thread.new { io.operate(schedule, 4) }
-    startTime = Time.now
+    startTime = Time.now.to_i
     sleep 2
-    expect(storage.rtt('8.8.8.8', startTime, Time.now).size).to eq 1
+    expect(storage.rtt('8.8.8.8', startTime, Time.now.to_i).size).to eq 1
     io.terminate
   end
 

@@ -38,9 +38,6 @@ class PingIO
 
     @pingThread = Thread.new { pingSendLoop } if @pingThread.nil?
     @replyThread =  Thread.new { replyReceiveLoop } if @replyThread.nil?
-
-    @pingThread.join()
-    @replyThread.join()
   end
 
   def terminate

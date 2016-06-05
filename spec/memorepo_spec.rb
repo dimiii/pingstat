@@ -27,7 +27,7 @@ describe 'InMemory Repository' do
     repo.add('8.8.8.8')
     repo.saveProbe(PingResult.new('8.8.8.8', Time.now, 90))
 
-    repo.rtt('8.8.8.8', Time.now - 5, Time.now + 5)
+    repo.rtt('8.8.8.8', Time.now.to_i - 5, Time.now.to_i + 5)
   end
 
   it 'blames on unknown hosts' do
