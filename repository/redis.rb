@@ -1,4 +1,6 @@
 require 'redis'
+require 'thread'
+require 'logger'
 
 require_relative 'interface'
 require_relative '../domain'
@@ -7,12 +9,15 @@ class InRedis < Storage
   # @param driver [Redis]
   def initialize(driver, hosts = [])
     @driver = driver
-    #lazyCreateDB(@driver)
+    @results = Queue.new
+    @logger = Logger.new(STDERR)
+    @storeThread = Thread.new { storeLoop }
     hosts.each { |host| add(host) }
   end
 
   def terminate
     @driver.close
+    @storeThread.terminate
   end
 
   def add(host)
@@ -28,11 +33,14 @@ class InRedis < Storage
   end
 
   def saveProbe(pingResult)
-    @driver.zadd(rttKey(pingResult.host), pingResult.pingTime.utc, rttVal(pingResult))
+    @results << pingResult
   end
 
   def rtt(host, beginPeriod, endPeriod)
-    @driver.zrangebyscore(rttKey(host), beginPeriod || "-inf", endPeriod || "+inf")
+    beginPeriod = beginPeriod.utc() unless beginPeriod.nil?
+    endPeriod = endPeriod.utc() unless endPeriod.nil?
+
+    @driver.zrangebyscore(rttKey(host), beginPeriod || '-inf', endPeriod || '+inf')
            .map { |tsv| extractRtt(tsv) }
   end
 
@@ -49,6 +57,23 @@ class InRedis < Storage
   end
 
   def extractRtt(tsv)
+    # 11 = 10 digits and tab
+    # So this repository operates only on data after 09 Sep 2001 01:46:40 UTC required at least 10 digits for encoding
     tsv[11..-1].to_i
+  end
+
+  def storeLoop
+    @logger.info 'Start background storing loop'
+    loop do
+      n = @results.size
+      next if n == 0
+
+      @driver.pipelined do
+        n.times {
+          result = @results.deq
+          @driver.zadd(rttKey(result.host), result.pingTime.utc, rttVal(result))
+        }
+      end
+    end
   end
 end

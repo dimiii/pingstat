@@ -22,6 +22,7 @@ describe 'Redis Repository' do
     repo.add('8.8.8.8')
 
     expect(repo.hosts.size).to eq 1
+    repo.terminate
   end
 
   it 'forgets hosts' do
@@ -29,6 +30,7 @@ describe 'Redis Repository' do
     repo.add('8.8.8.8')
     repo.delete('8.8.8.8')
     expect(repo.hosts.size).to eq 0
+    repo.terminate
   end
 
   it 'collects stats' do
@@ -37,8 +39,9 @@ describe 'Redis Repository' do
     for probe in probes
       repo.saveProbe(probe)
     end
-
-   expect(repo.rtt('8.8.8.8', Time.parse('2012-12-12T06:06'), Time.parse('2012-12-12T06:09'))).to eq [82, 81, 127, 81]
+    sleep 1 # give a chance to store
+    expect(repo.rtt('8.8.8.8', Time.parse('2012-12-12T06:06'), Time.parse('2012-12-12T06:09'))).to eq [82, 81, 127, 81]
+    repo.terminate
   end
 
   it 'operates only on data after Sun, 09 Sep 2001 01:46:40 UTC' do
@@ -48,5 +51,6 @@ describe 'Redis Repository' do
     # For example, store data timestamped a second before and we lose data.
     # Cause the time machine is not invented yet - not a big deal.
     expect(repo.extractRtt("999999999\t7")).to eq 0
+    repo.terminate
   end
 end
