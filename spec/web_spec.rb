@@ -13,7 +13,7 @@ describe 'Web application' do
   it 'should be alive' do
     get '/pingstat'
 
-    expect(last_response.body).to include("Hi!")
+    expect(last_response.body).to include 'Hi!'
   end
 
   it 'understands ip4 notation' do
@@ -33,6 +33,17 @@ describe 'Web application' do
   it 'does not understand wrong timestamps' do
     get '/pingstat/summary/1.2.3.4?from=A'
     expect(last_response).to_not be_ok
+
+    get '/pingstat/summary/1.2.3.4?to=B'
+    expect(last_response).to_not be_ok
+
+    get '/pingstat/summary/1.2.3.4?from=2&to=1'
+    expect(last_response).to_not be_ok
+  end
+
+  it 'calculates summary if can' do
+    get '/pingstat/summary/1.2.3.4?from=1&to=2'
+    expect(last_response.body).to include 'No data for period'
   end
 
   it 'collects ip' do

@@ -1,5 +1,7 @@
 require 'sinatra/base'
 require 'ipaddress'
+require 'json'
+
 require_relative 'pingd'
 
 
@@ -7,7 +9,7 @@ class RestResource < Sinatra::Base
   set :logging, true
   set :port, 8080
 
-  def initialize(app = nil, service: PingDaemon.new(operated: true))
+  def initialize(app = nil, service: PingDaemon.new(hostStorage:Redis.new, operated: true))
     super(app)
     @service = service
   end
@@ -32,13 +34,18 @@ class RestResource < Sinatra::Base
 
   get '/pingstat/summary/:ip' do
     host = params['ip']
-    beginPeriod = params['from'].to_i
-    endPeriod   = params['to'].to_i
-    halt 400, "Expected ipv4 address, got:#{host}" unless IPAddress::valid_ipv4? host
-    halt 400, "Expected number of epoch seconds, got:#{beginPeriod}" unless /^\d+$/ =~ beginPeriod or beginPeriod.nil?
-    halt 400, "Expected number of epoch seconds, got:#{endPeriod}" unless /^\d+$/ =~ endPeriod or endPeriod.nil?
+    beginPeriod = params['from']
+    endPeriod   = params['to']
 
-    @service.summary(host, beginPeriod, endPeriod)
+    halt 400, "Expected ipv4 address, got:#{host}" unless IPAddress::valid_ipv4? host
+    halt 400, "Expected number of epoch seconds, got:#{beginPeriod}" unless beginPeriod.nil? or /^\d+$/ =~ params['from']
+    halt 400, "Expected number of epoch seconds, got:#{endPeriod}" unless endPeriod.nil? or /^\d+$/ =~ params['to']
+    halt 400, 'Expected precedence of time' unless beginPeriod.nil? or endPeriod.nil? or beginPeriod < endPeriod
+
+    summary = @service.summary(host, beginPeriod && beginPeriod.to_i, endPeriod && endPeriod.to_i)
+    halt 404, 'No data for period' if summary.err?
+
+    summary.to_hash.to_json
   end
 
   get '/pingstat/op-hosts' do

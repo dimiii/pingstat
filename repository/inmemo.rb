@@ -31,6 +31,10 @@ class InMemory < Storage
   end
 
   def rtt(host, beginPeriod, endPeriod)
-    @rtt[host].select { |ts, rtt| ts >= beginPeriod && ts < endPeriod}.values
+    begin
+      @rtt[host].select { |ts, rtt| ts >= beginPeriod && ts < endPeriod}.values
+    rescue
+      []
+    end
   end
 end

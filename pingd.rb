@@ -38,7 +38,8 @@ class PingDaemon
   end
 
   def summary(host, beginPeriod, endPeriod)
-    raise "TBD"
+    values = @hostStorage.rtt(host, beginPeriod, endPeriod)
+    SummaryReport.new(values, beginPeriod, endPeriod, @pingFrequency)
   end
 
   def terminate
