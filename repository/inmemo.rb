@@ -26,7 +26,6 @@ class InMemory < Storage
 
   def saveProbe(pingResult)
     raise MissingHostError.new(pingResult.host) unless @rtt.key? pingResult.host
-    puts "RCV #{Time.now.to_f * 1000} #{pingResult}"
     @rtt[pingResult.host].store(pingResult.pingTime,  pingResult.rtt)
   end
 

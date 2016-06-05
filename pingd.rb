@@ -48,11 +48,11 @@ class PingDaemon
   end
 
   def fill
-    nHosts = @hostStorage.hosts.size
-    return if nHosts == 0
+    hosts = @hostStorage.hosts
+    return if hosts.empty?
 
-    chunkSize = nHosts / @pingFrequency
-    chunks = @hostStorage.hosts.each_slice(chunkSize).to_a
+    chunkSize = hosts.size / @pingFrequency
+    chunks = hosts.each_slice(chunkSize).to_a
 
     (0...chunks.length).each {|sec| merge(chunks[sec]) }
   end
@@ -65,6 +65,8 @@ class PingDaemon
       @tasks[task.host] = task
     end
     tasks.concat(tasksToSchedule)
+
+    @logger.warn 'Operation in mode exceeding design parameters' if tasks.size > @limitOfTasks / 2
   end
 
   private :fill, :merge
