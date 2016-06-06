@@ -1,10 +1,10 @@
 require 'rspec'
 require 'rack/test'
 
-require_relative '../io'
-require_relative '../pingd'
-require_relative '../domain'
-require_relative '../repository/interface'
+require_relative '../src/io'
+require_relative '../src/pingd'
+require_relative '../src/domain'
+require_relative '../src/repository/interface'
 
 describe 'InMemory Repository' do
   include Rack::Test::Methods

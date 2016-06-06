@@ -2,9 +2,9 @@ require 'rspec'
 require 'rack/test'
 require 'fakeredis'
 
-require_relative '../domain'
-require_relative '../repository/interface'
-require_relative '../repository/redis'
+require_relative '../src/domain'
+require_relative '../src/repository/interface'
+require_relative '../src/repository/redis'
 
 describe 'Redis Repository' do
   include Rack::Test::Methods
