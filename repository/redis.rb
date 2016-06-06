@@ -7,15 +7,18 @@ require_relative '../domain'
 
 class InRedis < Storage
   # @param driver [Redis]
-  def initialize(driver, hosts = [])
+  def initialize(driver, batchSize: 100)
     @driver = driver
     @results = Queue.new
+    @batchBuffer = []
+    @batchSize = batchSize
     @logger = Logger.new(STDERR)
     @storeThread = Thread.new { storeLoop }
     hosts.each { |host| add(host) }
   end
 
   def terminate
+    batchStore
     @driver.close
     @storeThread.terminate
   end
@@ -46,31 +49,40 @@ class InRedis < Storage
   end
 
   def rttVal(pingResult)
-    "#{pingResult.pingTime.utc.to_i}\t#{pingResult.rtt}"
+    "#{pingResult.pingTime.utc.to_i}:#{pingResult.rtt.round(3)}"
   end
 
   def statusVal(time)
     "#{host}:status"
   end
 
-  def extractRtt(tsv)
-    # 11 = 10 digits and tab
-    # So this repository operates only on data after 09 Sep 2001 01:46:40 UTC required at least 10 digits for encoding
-    tsv[11..-1].to_i
+  def extractRtt(сsv)
+    # 11 = 10 digits for date and colon
+    сsv[11..-1].to_i
   end
 
   def storeLoop
     @logger.info 'Start background storing loop'
     loop do
-      n = @results.size
-      next if n == 0
+      result = @results.pop
+      next if result.nil?
 
-      @driver.pipelined do
-        n.times {
-          result = @results.deq
-          @driver.zadd(rttKey(result.host), result.pingTime.utc, rttVal(result))
-        }
-      end
+      @batchBuffer << result
+      next if @batchBuffer.size < @batchSize # may be not required in production when massive number of hosts is used
+
+      batchStore
     end
   end
+
+  def batchStore
+    @driver.pipelined do
+      for result in @batchBuffer do
+        @driver.zadd(rttKey(result.host), result.pingTime.utc.to_i, rttVal(result))
+      end
+    end
+
+    @batchBuffer.clear
+  end
+
+  private :storeLoop, :batchStore
 end

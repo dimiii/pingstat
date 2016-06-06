@@ -34,7 +34,7 @@ describe 'Redis Repository' do
   end
 
   it 'collects stats' do
-    repo = InRedis.new(Redis.new)
+    repo = InRedis.new(Redis.new, batchSize: 2)
     repo.add('8.8.8.8')
     for probe in probes
       repo.saveProbe(probe)
