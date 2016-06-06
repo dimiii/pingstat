@@ -69,7 +69,7 @@ class PingIO
       opSecond += 1
       opSecond %= @pingFrequency
 
-      #cleanup
+      cleanup
     end
 
     @scheduler.join
