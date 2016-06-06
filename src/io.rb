@@ -29,7 +29,7 @@ class PingIO
     @logger = Logger.new(STDERR)
   end
 
-  def operate(schedule, pingFrequency, limitOfTasks = 1024)
+  def operate(schedule, pingFrequency, limitOfTasks)
     @logger.info "Start pinging each #{pingFrequency} secs with max #{limitOfTasks / 2} hosts per second"
 
     @limitOfTasks = limitOfTasks
@@ -105,9 +105,12 @@ class PingIO
     monitor = @selector.register(socket, :r)
     pingTime = Time.now
     monitor.value = proc { onReceive(socket, pingTime, task.host) }
-    socket.sendmsg_nonblock(msg)
-
-    @trashbag = @trashbag.put(socket, 0)
+    begin
+      socket.sendmsg_nonblock(msg)
+    rescue Errno::EBADF
+      @logger.error "Failed process #{task} with Errno::EBADF"
+    end
+    @trashbag = @trashbag.put(socket, TaskProgress.new(task))
   end
 
   def onReceive(socket, pingTime, host)
@@ -141,17 +144,21 @@ class PingIO
 
   def cleanup
     outdated = []
-    @trashbag.each do |socket, ttl|
-      if ttl > @taskTimeout
+    @trashbag.each do |socket, taskProgress|
+      if taskProgress.ttl > @taskTimeout
         outdated << socket
         release(socket)
       end
     end
+
+    taskProgress = @trashbag[outdated[0]] unless outdated.empty?
+    @logger.debug "Cleaned #{outdated.size} items: [#{taskProgress} ...], remains: #{@trashbag.size}" unless taskProgress.nil?
+
     @trashbag = @trashbag.except(*outdated)
 
     @trashbag = cleanupOldest(@trashbag, @limitOfTasks)
 
-    @trashbag = @trashbag.map {|socket, ttl| [socket, ttl + 1] }
+    @trashbag = @trashbag.map {|socket, taskProgress| [socket, taskProgress.hop] }
   end
 
   def release(socket)
@@ -162,9 +169,13 @@ class PingIO
   def cleanupOldest(trashbag, limit)
     reserve = limit / 2 - trashbag.size
     if reserve < 0
-      flatten =  trashbag.sort_by { |_, ttl| ttl }.flatten(1)
+      flatten =  trashbag.sort_by { |_, taskProgress| taskProgress.ttl }.flatten(1)
       outdatedIdx = (0...flatten.size).select {|n| n.even? }.to_a[reserve..-1]
       outdated =  flatten.values_at(*outdatedIdx)
+
+      taskProgress = @trashbag[outdated[0]] unless outdated.empty?
+      @logger.warn "Dropped #{outdated.size} items: [#{taskProgress} ...], remains: #{@trashbag.size}"
+
       trashbag = trashbag.except(*outdated)
       outdated.each { |socket| release(socket) }
     end

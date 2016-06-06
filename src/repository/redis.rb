@@ -80,7 +80,7 @@ class InRedis < Storage
         @driver.zadd(rttKey(result.host), result.pingTime.utc.to_i, rttVal(result))
       end
     end
-
+    @logger.debug "Stored #{@batchBuffer.size} items: [#{@batchBuffer[0].host}, ...]" unless @batchBuffer.empty?
     @batchBuffer.clear
   end
 

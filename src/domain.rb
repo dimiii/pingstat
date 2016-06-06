@@ -13,6 +13,25 @@ class PingTask
   end
 end
 
+class TaskProgress
+  attr_reader :task, :ttl
+
+  # @param task [PingTask]
+  def initialize(task, ttl = 0)
+    @task = task
+    @ttl  = ttl
+  end
+
+  def hop
+    @ttl += 1
+    self
+  end
+
+  def to_s
+    "{host:#{@task.host}, ttl:#{@ttl}}"
+  end
+end
+
 class PingResult
   attr_reader :pingTime, :rtt, :host
 

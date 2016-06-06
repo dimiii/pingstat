@@ -27,7 +27,7 @@ describe 'Ping IO' do
     storage = InMemory.new(testList)
 
     io = PingIO.new(storage)
-    Thread.new { io.operate(schedule, 4) }
+    Thread.new { io.operate(schedule, 4, 1024) }
     startTime = Time.now.to_i
     sleep 2
     expect(storage.rtt('8.8.8.8', startTime, Time.now.to_i).size).to eq 1
@@ -45,7 +45,8 @@ describe 'Ping IO' do
     trashbag = Hamster::Hash.new
     (0..5).each do |i|
       sock = double("sock_#{i}")
-      trashbag = trashbag.put(sock, i * 10)
+      task = PingTask.new("8.8.8.#{i}", 0)
+      trashbag = trashbag.put(sock, TaskProgress.new(task, i * 10))
       allow(sock).to receive(:close)
     end
 
