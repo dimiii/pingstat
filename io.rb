@@ -15,7 +15,7 @@ class PingIO
   ICMP_SUBCODE   = 0
 
   # @param hostStorage [Storage]
-  def initialize(hostStorage, taskTimeout = 30)
+  def initialize(hostStorage, taskTimeout: 30)
     raise 'Windows OS is not tested and not supported' if (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
 
     @isMac = (/darwin/ =~ RUBY_PLATFORM) != nil
