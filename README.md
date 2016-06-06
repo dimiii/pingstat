@@ -42,6 +42,6 @@
 ================
 
 Из-за использования Raw сокетов, в Linux интерпретатор должен запускаться в режиме супер-пользователя или с установленными возможностями:
-> setcap 'CAP_NET_RAW+eip CAP_NET_ADMIN+eip' /usr/bin/ruby
+> <s>setcap CAP_NET_RAW+eip /usr/bin/ruby</s> - ???
 
 В Mac OS X таких проблем нет.
