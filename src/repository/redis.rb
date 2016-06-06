@@ -56,9 +56,9 @@ class InRedis < Storage
     "#{host}:status"
   end
 
-  def extractRtt(сsv)
+  def extractRtt(csv)
     # 11 = 10 digits for date and colon
-    сsv[11..-1].to_i
+    csv[11..-1].to_i
   end
 
   def storeLoop
