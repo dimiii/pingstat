@@ -36,7 +36,7 @@
 
 
 
-> pingstat user$ ruby src/web.rb
+> pingstat user$ ruby app/web.rb
 
 Издержки решения
 ================
