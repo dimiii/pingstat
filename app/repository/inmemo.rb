@@ -23,13 +23,13 @@ class InMemory
     @hosts
   end
 
-  def saveProbe(pingResult)
-    @rtt[pingResult.host].store(pingResult.pingTime.utc.to_i,  pingResult.rtt)
+  def save_probe(ping_result)
+    @rtt[ping_result.host].store(ping_result.ping_time.utc.to_i,  ping_result.rtt)
   end
 
-  def rtt(host, beginPeriod, endPeriod)
+  def rtt(host, begin_period, end_period)
     begin
-      @rtt[host].select { |ts, rtt| ts >= (beginPeriod || 0) && ts.to_i < (endPeriod || 9999999999)}.values
+      @rtt[host].select { |ts, _| ts >= (begin_period || 0) && ts.to_i < (end_period || 9999999999)}.values
     ensure
       []
     end

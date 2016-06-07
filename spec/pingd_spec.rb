@@ -33,7 +33,7 @@ describe 'Ping Daemon' do
     (1..182).each do |i|
       hosts.add "0.0.0.#{i}"
     end
-    pingd = PingDaemon.new(hostStorage: hosts)
+    pingd = PingDaemon.new(host_storage: hosts)
 
     expect(pingd.schedule[0].size).to eq 5
     expect(pingd.schedule[1].size).to eq 3

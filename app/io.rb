@@ -5,37 +5,37 @@ require 'logger'
 require 'thread'
 require 'hamster'
 
-
 include Socket::Constants
+
 class PingIO
 
   ICMP_ECHOREPLY = 0
   ICMP_ECHO      = 8
   ICMP_SUBCODE   = 0
 
-  def initialize(hostStorage, taskTimeout: 30)
+  def initialize(host_storage, task_timeout: 30)
     raise 'Windows OS is not tested and not supported' if (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
 
-    @isMac = (/darwin/ =~ RUBY_PLATFORM) != nil
-    @taskTimeout = taskTimeout
+    @is_mac = (/darwin/ =~ RUBY_PLATFORM) != nil
+    @task_timeout = task_timeout
 
-    @hostStorage = hostStorage
-    @trashbag = Hamster::Hash.new
+    @host_storage = host_storage
+    @trash_bag = Hamster::Hash.new
 
     @selector = NIO::Selector.new
     @scheduler = Rufus::Scheduler.new(:max_work_threads => 1)
     @logger = Logger.new(STDERR)
   end
 
-  def operate(schedule, pingFrequency, limitOfTasks)
-    @logger.info "Start pinging each #{pingFrequency} secs with max #{limitOfTasks / 2} hosts per second"
+  def operate(schedule, ping_frequency, tasks_limit)
+    @logger.info "Start pinging each #{ping_frequency} secs with max #{tasks_limit / 2} hosts per second"
 
-    @limitOfTasks = limitOfTasks
-    @pingFrequency = pingFrequency
+    @tasks_limit = tasks_limit
+    @ping_frequency = ping_frequency
     @schedule = schedule
 
-    @pingThread = Thread.new { pingSendLoop } if @pingThread.nil?
-    @replyThread =  Thread.new { replyReceiveLoop } if @replyThread.nil?
+    @ping_thread  = Thread.new { ping_send_loop } if @ping_thread.nil?
+    @reply_thread = Thread.new { reply_receive_loop } if @reply_thread.nil?
   end
 
   def terminate
@@ -51,21 +51,21 @@ class PingIO
       @logger.error 'Failed close nio4r selector'
     end
 
-    @pingThread.terminate unless @pingThread.nil?
-    @replyThread.terminate unless @replyThread.nil?
+    @ping_thread.terminate unless @ping_thread.nil?
+    @reply_thread.terminate unless @reply_thread.nil?
 
     @logger.info 'Terminated'
   end
 
-  def pingSendLoop
+  def ping_send_loop
     @logger.info 'Start ping loop'
 
-    opSecond = 0
+    opsecond = 0
     @scheduler.every '1s' do
-      @schedule[opSecond].each { |task| ping(task) } unless @schedule[opSecond].nil?
+      @schedule[opsecond].each { |task| ping(task) } unless @schedule[opsecond].nil?
 
-      opSecond += 1
-      opSecond %= @pingFrequency
+      opsecond += 1
+      opsecond %= @ping_frequency
 
       cleanup
     end
@@ -74,11 +74,11 @@ class PingIO
     @logger.info 'Stop ping loop'
   end
 
-  def replyReceiveLoop
+  def reply_receive_loop
     @logger.info 'Start reply loop'
     loop do
 
-      if not @selector.nil?
+      unless @selector.nil?
         @selector.wakeup # give a chance to register sockets in pingLoop
         @selector.select { |monitor| monitor.value.call(monitor) }
         # nio4r selector is a weak chain here - it swallows err events (and does not allow to classify them)
@@ -93,7 +93,7 @@ class PingIO
 
   def ping(task)
     # see https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man4/icmp.4.html
-    socket = Socket.new(PF_INET, @isMac ? SOCK_DGRAM : SOCK_RAW, IPPROTO_ICMP)
+    socket = Socket.new(Socket::PF_INET, @is_mac ? Socket::SOCK_DGRAM : Socket::SOCK_RAW, Socket::IPPROTO_ICMP)
     sockaddr = Socket.sockaddr_in(1984, task.host) # port does not matter
     socket.connect(sockaddr)
 
@@ -101,24 +101,24 @@ class PingIO
     msg[2..3] = [checksum(msg)].pack('n')
 
     monitor = @selector.register(socket, :r)
-    pingTime = Time.now
-    monitor.value = proc { onReceive(socket, pingTime, task.host) }
+    ping_time = Time.now
+    monitor.value = proc { on_receive(socket, ping_time, task.host) }
     begin
       socket.sendmsg_nonblock(msg)
     rescue Errno::EBADF
       @logger.error "Failed process #{task} with Errno::EBADF"
     end
-    @trashbag = @trashbag.put(socket, TaskProgress.new(task))
+    @trash_bag = @trash_bag.put(socket, TaskProgress.new(task))
   end
 
-  def onReceive(socket, pingTime, host)
-    rtt = (Time.now() - pingTime) * 1000
-    @hostStorage.saveProbe(PingResult.new(host, pingTime, rtt))
+  def on_receive(socket, ping_time, host)
+    rtt = (Time.now - ping_time) * 1000
+    @host_storage.save_probe(PingResult.new(host, ping_time, rtt))
     release(socket)
-    @trashbag = @trashbag.delete socket
+    @trash_bag = @trash_bag.delete socket
   rescue EOFError
     release(socket)
-    @trashbag = @trashbag.delete socket
+    @trash_bag = @trash_bag.delete socket
   end
 
   def checksum(msg)
@@ -135,26 +135,27 @@ class PingIO
     end
 
     check = (check >> 16) + (check & 0xffff)
-    return (~((check >> 16) + check) & 0xffff)
+    ~((check >> 16) + check) & 0xffff
   end
 
   def cleanup
     outdated = []
-    @trashbag.each do |socket, taskProgress|
-      if taskProgress.ttl > @taskTimeout
+    @trash_bag.each do |socket, task_progress|
+      if task_progress.ttl > @task_timeout
         outdated << socket
         release(socket)
       end
     end
 
-    taskProgress = @trashbag[outdated[0]] unless outdated.empty?
-    @logger.debug "Cleaned #{outdated.size} items: [#{taskProgress} ...], remains: #{@trashbag.size}" unless taskProgress.nil?
+    unless outdated.empty?
+      @logger.debug "Cleaned #{outdated.size} items: [#{@trash_bag[outdated[0]]} ...], remains: #{@trash_bag.size}"
+    end
 
-    @trashbag = @trashbag.except(*outdated)
+    @trash_bag = @trash_bag.except(*outdated)
 
-    @trashbag = cleanupOldest(@trashbag, @limitOfTasks)
+    @trash_bag = cleanup_oldest(@trash_bag, @tasks_limit)
 
-    @trashbag = @trashbag.map {|socket, taskProgress| [socket, taskProgress.hop] }
+    @trash_bag = @trash_bag.map {|socket, task_progress| [socket, task_progress.hop] }
   end
 
   def release(socket)
@@ -162,23 +163,24 @@ class PingIO
     socket.close
   end
 
-  def cleanupOldest(trashbag, limit)
-    reserve = limit / 2 - trashbag.size
+  def cleanup_oldest(trash_bag, limit)
+    reserve = limit / 2 - trash_bag.size
     if reserve < 0
-      flatten =  trashbag.sort_by { |_, taskProgress| taskProgress.ttl }.flatten(1)
-      outdatedIdx = (0...flatten.size).select {|n| n.even? }.to_a[reserve..-1]
-      outdated =  flatten.values_at(*outdatedIdx)
+      flatten =  trash_bag.sort_by { |_, task_progress| task_progress.ttl }.flatten(1)
+      outdated_idx = (0...flatten.size).select {|n| n.even? }.to_a[reserve..-1]
+      outdated =  flatten.values_at(*outdated_idx)
 
-      taskProgress = @trashbag[outdated[0]] unless outdated.empty?
-      @logger.warn "Dropped #{outdated.size} items: [#{taskProgress} ...], remains: #{@trashbag.size}"
+      unless outdated.empty?
+        @logger.warn "Dropped #{outdated.size} items: [#{@trash_bag[outdated[0]]} ...], remains: #{@trash_bag.size}"
+      end
 
-      trashbag = trashbag.except(*outdated)
+      trash_bag = trash_bag.except(*outdated)
       outdated.each { |socket| release(socket) }
     end
 
-    trashbag
+    trash_bag
   end
 
-  private :pingSendLoop, :replyReceiveLoop, :ping, :onReceive, :checksum, :cleanup, :release
+  private :ping_send_loop, :reply_receive_loop, :ping, :on_receive, :checksum, :cleanup, :release
 
 end

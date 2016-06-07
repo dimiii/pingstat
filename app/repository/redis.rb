@@ -5,20 +5,20 @@ require 'logger'
 require_relative '../domain'
 
 class InRedis
-  def initialize(driver, batchSize: 100)
+  def initialize(driver, batch_size: 100)
     @driver = driver
     @results = Queue.new
-    @batchBuffer = []
-    @batchSize = batchSize
+    @batch_buffer = []
+    @batch_size = batch_size
     @logger = Logger.new(STDERR)
-    @storeThread = Thread.new { storeLoop }
+    @store_thread = Thread.new { store_loop }
     hosts.each { |host| add(host) }
   end
 
   def terminate
-    batchStore
+    batch_store
     @driver.close
-    @storeThread.terminate
+    @store_thread.terminate
   end
 
   def add(host)
@@ -33,50 +33,48 @@ class InRedis
     @driver.smembers('operated-hosts')
   end
 
-  def saveProbe(pingResult)
-    @results << pingResult
+  def save_probe(ping_result)
+    @results << ping_result
   end
 
-  def rtt(host, beginPeriod, endPeriod)
-    @driver.zrangebyscore(rttKey(host), beginPeriod || '-inf', endPeriod || '+inf')
-           .map { |tsv| extractRtt(tsv) }
+  def rtt(host, begin_period, end_period)
+    @driver.zrangebyscore(rtt_key(host), begin_period || '-inf', end_period || '+inf')
+           .map { |csv| extract_rtt(csv) }
   end
 
-  def rttKey(host)
+  def rtt_key(host)
     "#{host}:rtt"
   end
 
-  def rttVal(pingResult)
-    "#{pingResult.pingTime.utc.to_i}:#{pingResult.rtt.round(3)}"
+  def rtt_val(ping_result)
+    "#{ping_result.ping_time.utc.to_i}:#{ping_result.rtt.round(3)}"
   end
 
-  def extractRtt(csv)
+  def extract_rtt(csv)
     # 11 = 10 digits for date and colon
     csv[11..-1].to_i
   end
 
-  def storeLoop
+  def store_loop
     @logger.info 'Start background storing loop'
     loop do
       result = @results.pop
       next if result.nil?
 
-      @batchBuffer << result
-      next if @batchBuffer.size < @batchSize # may be not required in production when massive number of hosts is used
+      @batch_buffer << result
+      next if @batch_buffer.size < @batch_size # may be not required in production when massive number of hosts is used
 
-      batchStore
+      batch_store
     end
   end
 
-  def batchStore
+  def batch_store
     @driver.pipelined do
-      for result in @batchBuffer do
-        @driver.zadd(rttKey(result.host), result.pingTime.utc.to_i, rttVal(result))
-      end
+      @batch_buffer.each { |result| @driver.zadd(rtt_key(result.host), result.ping_time.utc.to_i, rtt_val(result))}
     end
-    @logger.debug "Stored #{@batchBuffer.size} items: [#{@batchBuffer[0].host}, ...]" unless @batchBuffer.empty?
-    @batchBuffer.clear
+    @logger.debug "Stored #{@batch_buffer.size} items: [#{@batch_buffer[0].host}, ...]" unless @batch_buffer.empty?
+    @batch_buffer.clear
   end
 
-  private :storeLoop, :batchStore
+  private :store_loop, :batch_store, :rtt_key, :rtt_val
 end

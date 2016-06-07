@@ -11,7 +11,7 @@ class RestResource < Sinatra::Base
   set :logging, true
   set :port, 8080
 
-  service = PingDaemon.new(hostStorage: InRedis.new(Redis.new, batchSize: 100), pingFrequency: 60, operated: true)
+  service = PingDaemon.new(host_storage: InRedis.new(Redis.new, batch_size: 100), ping_frequency: 60, operated: true)
 
   get '/pingstat' do
     'Hi!'
@@ -33,15 +33,15 @@ class RestResource < Sinatra::Base
 
   get '/pingstat/summary/:ip' do
     host = params['ip']
-    beginPeriod = params['from']
-    endPeriod   = params['to']
+    begin_period = params['from']
+    end_period   = params['to']
 
     halt 400, "Expected ipv4 address, got:#{host}" unless IPAddress::valid_ipv4? host
-    halt 400, "Expected number of epoch seconds, got:#{beginPeriod}" unless beginPeriod.nil? or /^\d+$/ =~ params['from']
-    halt 400, "Expected number of epoch seconds, got:#{endPeriod}" unless endPeriod.nil? or /^\d+$/ =~ params['to']
-    halt 400, 'Expected precedence of time' unless beginPeriod.nil? or endPeriod.nil? or beginPeriod < endPeriod
+    halt 400, "Expected number of epoch seconds, got:#{begin_period}" unless begin_period.nil? or /^\d+$/ =~ params['from']
+    halt 400, "Expected number of epoch seconds, got:#{end_period}" unless end_period.nil? or /^\d+$/ =~ params['to']
+    halt 400, 'Expected precedence of time' unless begin_period.nil? or end_period.nil? or begin_period < end_period
 
-    summary = service.summary(host, beginPeriod && beginPeriod.to_i, endPeriod && endPeriod.to_i)
+    summary = service.summary(host, begin_period && begin_period.to_i, end_period && end_period.to_i)
     halt 404, 'No data for period' if summary.err?
 
     summary.to_hash.to_json

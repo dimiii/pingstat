@@ -1,15 +1,15 @@
 class PingTask
-  attr_reader :secOfMin, :host
+  attr_reader :opsecond, :host
 
   # @param host [String]
-  # @param secOfMin [Number]
-  def initialize(host, secOfMin)
-    @secOfMin = secOfMin % 60
+  # @param opsecond [Number]
+  def initialize(host, opsecond)
+    @opsecond = opsecond % 60
     @host = host
   end
 
   def to_s
-    "{host: #{@host}, scheduled:#{@secOfMin}}"
+    "{host: #{@host}, opsecond:#{@opsecond}}"
   end
 end
 
@@ -33,36 +33,36 @@ class TaskProgress
 end
 
 class PingResult
-  attr_reader :pingTime, :rtt, :host
+  attr_reader :ping_time, :rtt, :host
 
   # @param host [String]
-  # @param pingTime [Time]
+  # @param ping_time [Time]
   # @param rtt [Number]
-  def initialize(host, pingTime, rtt)
+  def initialize(host, ping_time, rtt)
     @host = host
-    @pingTime = pingTime
+    @ping_time = ping_time
     @rtt = rtt
   end
 
   def to_s
-    "{host:#{@host}, pinged:#{pingTime}, rtt:#{rtt}}"
+    "{host:#{@host}, pinged:#{ping_time}, rtt:#{rtt}}"
   end
 end
 
 class SummaryReport
-  attr_reader :avg, :min, :max, :med, :sd, :los
+  attr_reader :avg, :min, :max, :med, :sd, :loss
 
   # @param vals [Array]
-  def initialize(vals = [], beginPeriod, endPeriod, pingFrequency, precision: 2)
-    numExpectedPings = (endPeriod.to_i - beginPeriod.to_i) / pingFrequency unless beginPeriod.nil? or endPeriod.nil?
-    @loss= 1 - vals.size.to_f / numExpectedPings unless numExpectedPings.nil? or numExpectedPings == 0
+  def initialize(vals = [], begin_period, end_period, ping_frequency, precision: 2)
+    num_pings_expected = (end_period.to_i - begin_period.to_i) / ping_frequency unless begin_period.nil? or end_period.nil?
+    @loss= 1 - vals.size.to_f / num_pings_expected unless num_pings_expected.nil? or num_pings_expected == 0
     @precision = precision
-    @isErr = vals.empty?
+    @is_err = vals.empty?
 
-    calcRttMetrics(vals) unless @isErr
+    calc_rtt_metrics(vals) unless @is_err
   end
 
-  def calcRttMetrics(vals)
+  def calc_rtt_metrics(vals)
     sorted = vals.sort
     center = sorted.size / 2
 
@@ -74,7 +74,7 @@ class SummaryReport
   end
 
   def err?
-    @isErr
+    @is_err
   end
 
   def to_hash

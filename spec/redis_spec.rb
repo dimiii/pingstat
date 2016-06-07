@@ -33,11 +33,10 @@ describe 'Redis Repository' do
   end
 
   it 'collects stats' do
-    repo = InRedis.new(Redis.new, batchSize: 2)
+    repo = InRedis.new(Redis.new, batch_size: 2)
     repo.add('8.8.8.8')
-    for probe in probes
-      repo.saveProbe(probe)
-    end
+    probes.each do |probe| repo.save_probe(probe) end
+
     sleep 1 # give a chance to store
     expect(repo.rtt('8.8.8.8', Time.parse('2012-12-12T06:06'), Time.parse('2012-12-12T06:09'))).to eq [82, 81, 127, 81]
     repo.terminate
@@ -45,11 +44,11 @@ describe 'Redis Repository' do
 
   it 'operates only on data after Sun, 09 Sep 2001 01:46:40 UTC' do
     repo = InRedis.new(Redis.new)
-    expect(repo.extractRtt("1000000000\t1")).to eq 1
+    expect(repo.extract_rtt("1000000000\t1")).to eq 1
 
     # For example, store data timestamped a second before and we lose data.
     # Cause the time machine is not invented yet - not a big deal.
-    expect(repo.extractRtt("999999999\t7")).to eq 0
+    expect(repo.extract_rtt("999999999\t7")).to eq 0
     repo.terminate
   end
 end

@@ -24,7 +24,7 @@ describe 'InMemory Repository' do
   it 'collects stats' do
     repo = InMemory.new
     repo.add('8.8.8.8')
-    repo.saveProbe(PingResult.new('8.8.8.8', Time.now, 90))
+    repo.save_probe(PingResult.new('8.8.8.8', Time.now, 90))
 
     repo.rtt('8.8.8.8', Time.now.to_i - 5, Time.now.to_i + 5)
   end
