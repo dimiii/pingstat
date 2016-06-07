@@ -1,8 +1,8 @@
 require 'rspec'
 require 'rack/test'
 
-require_relative '../src/pingd'
-require_relative '../src/domain'
+require_relative '../app/pingd'
+require_relative '../app/domain'
 
 describe 'Ping Daemon' do
   include Rack::Test::Methods

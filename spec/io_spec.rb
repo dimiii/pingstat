@@ -1,9 +1,9 @@
 require 'rspec'
 require 'rack/test'
 
-require_relative '../src/io'
-require_relative '../src/pingd'
-require_relative '../src/domain'
+require_relative '../app/io'
+require_relative '../app/pingd'
+require_relative '../app/domain'
 
 describe 'Ping IO' do
   include Rack::Test::Methods

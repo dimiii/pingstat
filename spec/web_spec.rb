@@ -1,7 +1,7 @@
 require 'rspec'
 require 'rack/test'
 
-require_relative '../src/web'
+require_relative '../app/web'
 
 describe 'Web application' do
   include Rack::Test::Methods

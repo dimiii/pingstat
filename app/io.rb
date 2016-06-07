@@ -5,7 +5,6 @@ require 'logger'
 require 'thread'
 require 'hamster'
 
-require_relative 'repository/interface'
 
 include Socket::Constants
 class PingIO
@@ -14,7 +13,6 @@ class PingIO
   ICMP_ECHO      = 8
   ICMP_SUBCODE   = 0
 
-  # @param hostStorage [Storage]
   def initialize(hostStorage, taskTimeout: 30)
     raise 'Windows OS is not tested and not supported' if (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
 
@@ -121,8 +119,6 @@ class PingIO
   rescue EOFError
     release(socket)
     @trashbag = @trashbag.delete socket
-  rescue Storage::MissingHostError
-    @logger.error "Unknown host #{host}, check db consistency"
   end
 
   def checksum(msg)

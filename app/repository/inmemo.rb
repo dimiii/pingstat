@@ -1,7 +1,6 @@
-require_relative 'interface'
 require_relative '../domain'
 
-class InMemory < Storage
+class InMemory
   def initialize(hosts = [])
     @hosts = []
     @rtt = Hash.new
@@ -25,7 +24,6 @@ class InMemory < Storage
   end
 
   def saveProbe(pingResult)
-    raise MissingHostError.new(pingResult.host) unless @rtt.key? pingResult.host
     @rtt[pingResult.host].store(pingResult.pingTime.utc.to_i,  pingResult.rtt)
   end
 

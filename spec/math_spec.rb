@@ -1,7 +1,7 @@
 require 'rspec'
 require 'rack/test'
 
-require_relative '../src/domain'
+require_relative '../app/domain'
 
 describe 'Math' do
   include Rack::Test::Methods

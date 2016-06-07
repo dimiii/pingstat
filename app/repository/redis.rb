@@ -2,11 +2,9 @@ require 'redis'
 require 'thread'
 require 'logger'
 
-require_relative 'interface'
 require_relative '../domain'
 
-class InRedis < Storage
-  # @param driver [Redis]
+class InRedis
   def initialize(driver, batchSize: 100)
     @driver = driver
     @results = Queue.new
@@ -50,10 +48,6 @@ class InRedis < Storage
 
   def rttVal(pingResult)
     "#{pingResult.pingTime.utc.to_i}:#{pingResult.rtt.round(3)}"
-  end
-
-  def statusVal(time)
-    "#{host}:status"
   end
 
   def extractRtt(csv)

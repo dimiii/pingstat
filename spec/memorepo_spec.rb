@@ -1,10 +1,9 @@
 require 'rspec'
 require 'rack/test'
 
-require_relative '../src/io'
-require_relative '../src/pingd'
-require_relative '../src/domain'
-require_relative '../src/repository/interface'
+require_relative '../app/io'
+require_relative '../app/pingd'
+require_relative '../app/domain'
 
 describe 'InMemory Repository' do
   include Rack::Test::Methods
@@ -28,10 +27,5 @@ describe 'InMemory Repository' do
     repo.saveProbe(PingResult.new('8.8.8.8', Time.now, 90))
 
     repo.rtt('8.8.8.8', Time.now.to_i - 5, Time.now.to_i + 5)
-  end
-
-  it 'blames on unknown hosts' do
-    repo = InMemory.new
-    expect { repo.saveProbe(PingResult.new('1.2.3.4', Time.now, 90)) }.to raise_error Storage::MissingHostError
   end
 end
