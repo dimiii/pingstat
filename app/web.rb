@@ -6,7 +6,7 @@ require 'redis'
 require_relative 'pingd'
 require_relative 'repository/redis'
 
-
+# REST access to pingstat application.
 class RestResource < Sinatra::Base
   set :logging, true
   set :port, 8080
@@ -26,7 +26,7 @@ class RestResource < Sinatra::Base
 
   put '/pingstat/del/:ip' do
     host = params['ip']
-    halt 400, "Expected ipv4 address, got:#{host}"  unless IPAddress::valid_ipv4? host
+    halt 400, "Expected ipv4 address, got:#{host}" unless IPAddress::valid_ipv4? host
 
     service.delete(host)
   end
@@ -51,5 +51,5 @@ class RestResource < Sinatra::Base
     service.tasks.keys.to_json
   end
 
-  run! if __FILE__ == $0
+  run! if __FILE__ == $PROGRAM_NAME
 end

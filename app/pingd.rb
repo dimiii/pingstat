@@ -4,18 +4,19 @@ require_relative 'repository/inmemo'
 require_relative 'io'
 require_relative 'domain'
 
+# Base class of application, which manages monitored hosts, schedules ping tasks and delegates their execution.
 class PingDaemon
   attr_reader :tasks, :schedule
 
-  def initialize(host_storage: InMemory.new, ping_io: PingIO.new(host_storage), ping_frequency: 60, operated: false)
+  def initialize(host_storage: InMemory.new, ping_io: PingIO.new(host_storage), ping_frequency: 60, operated: false)\
     raise 'Expected number of seconds > 1 as a ping frequency' if ping_frequency < 2
 
     @host_storage = host_storage
     @ping_frequency = ping_frequency # in seconds
     @tasks_lim, _ = Process.getrlimit(:NOFILE)
-    @tasks  = Hash.new   # host -> PingTask
-    @schedule = Hash.new # sec -> [PingTask]
-    (0...ping_frequency).each {|sec| @schedule[sec] = [] }
+    @tasks  = {}   # host -> PingTask
+    @schedule = {} # sec -> [PingTask]
+    (0...ping_frequency).each { |sec| @schedule[sec] = [] }
     fill
 
     @ping_io = ping_io
@@ -60,10 +61,10 @@ class PingDaemon
   end
 
   def merge(hosts_to_schedule)
-    ping_time, tasks = @schedule.min_by {|_, tasks| tasks.size} # охуенно же: min_by {|tasks| tasks.size} != min_by {|_, tasks| tasks.size}
-    tasks_to_schedule = hosts_to_schedule.map {|host| PingTask.new(host, ping_time)}
+    opsecond, tasks = @schedule.min_by { |_, tasks| tasks.size } # охуенно же: min_by {|tasks| tasks.size} != min_by {|_, tasks| tasks.size}
+    tasks_to_schedule = hosts_to_schedule.map { |host| PingTask.new(host, opsecond) }
 
-    tasks_to_schedule.each do |task|  @tasks[task.host] = task end
+    tasks_to_schedule.each { |task| @tasks[task.host] = task }
     tasks.concat(tasks_to_schedule)
 
     @logger.warn 'Operation in mode exceeding design parameters' if tasks.size > @tasks_lim / 2

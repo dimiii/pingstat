@@ -1,9 +1,10 @@
 require_relative '../domain'
 
+# Memory storage for testing.
 class InMemory
   def initialize(hosts = [])
     @hosts = []
-    @rtt = Hash.new
+    @rtt = {}
     hosts.each { |host| add(host) }
   end
 
@@ -12,7 +13,7 @@ class InMemory
 
   def add(host)
     @hosts.push host
-    @rtt[host] = Hash.new unless @rtt.key? host
+    @rtt[host] = {} unless @rtt.key? host
   end
 
   def delete(host)
@@ -24,12 +25,12 @@ class InMemory
   end
 
   def save_probe(ping_result)
-    @rtt[ping_result.host].store(ping_result.ping_time.utc.to_i,  ping_result.rtt)
+    @rtt[ping_result.host].store(ping_result.ping_time.utc.to_i, ping_result.rtt)
   end
 
   def rtt(host, begin_period, end_period)
     begin
-      @rtt[host].select { |ts, _| ts >= (begin_period || 0) && ts.to_i < (end_period || 9999999999)}.values
+      @rtt[host].select { |ts, _| ts >= (begin_period || 0) && ts.to_i < (end_period || 9999999999) }.values
     ensure
       []
     end

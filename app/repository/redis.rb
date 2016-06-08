@@ -4,6 +4,7 @@ require 'logger'
 
 require_relative '../domain'
 
+# Redis storage abstraction layer.
 class InRedis
   def initialize(driver, batch_size: 100)
     @driver = driver
@@ -70,7 +71,7 @@ class InRedis
 
   def batch_store
     @driver.pipelined do
-      @batch_buffer.each { |result| @driver.zadd(rtt_key(result.host), result.ping_time.utc.to_i, rtt_val(result))}
+      @batch_buffer.each { |result| @driver.zadd(rtt_key(result.host), result.ping_time.utc.to_i, rtt_val(result)) }
     end
     @logger.debug "Stored #{@batch_buffer.size} items: [#{@batch_buffer[0].host}, ...]" unless @batch_buffer.empty?
     @batch_buffer.clear

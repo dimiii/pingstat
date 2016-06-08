@@ -1,10 +1,11 @@
+# The subject of ping scheduling.
 class PingTask
   attr_reader :opsecond, :host
 
   # @param host [String]
   # @param opsecond [Number]
   def initialize(host, opsecond)
-    @opsecond = opsecond % 60
+    @opsecond = opsecond
     @host = host
   end
 
@@ -13,6 +14,7 @@ class PingTask
   end
 end
 
+# The progress of ping. Used to trace timeouts.
 class TaskProgress
   attr_reader :task, :ttl
 
@@ -32,6 +34,7 @@ class TaskProgress
   end
 end
 
+# Traits of ping.
 class PingResult
   attr_reader :ping_time, :rtt, :host
 
@@ -49,12 +52,14 @@ class PingResult
   end
 end
 
+# The subject of user interest.
 class SummaryReport
   attr_reader :avg, :min, :max, :med, :sd, :loss
 
   # @param vals [Array]
   def initialize(vals = [], begin_period, end_period, ping_frequency, precision: 2)
-    num_pings_expected = (end_period.to_i - begin_period.to_i) / ping_frequency unless begin_period.nil? or end_period.nil?
+    is_open_interval = begin_period.nil? or end_period.nil?
+    num_pings_expected = (end_period.to_i - begin_period.to_i) / ping_frequency unless is_open_interval
     @loss= 1 - vals.size.to_f / num_pings_expected unless num_pings_expected.nil? or num_pings_expected == 0
     @precision = precision
     @is_err = vals.empty?
@@ -78,12 +83,12 @@ class SummaryReport
   end
 
   def to_hash
-    {:rtt => {:avg => round(@avg, @precision),
-              :min => round(@min, @precision),
-              :max => round(@max, @precision),
-              :med => round(@med, @precision),
-              :sd  => round(@sd, @precision)},
-     :loss => round(@loss, @precision)
+    { :rtt => { :avg => round(@avg, @precision),
+                :min => round(@min, @precision),
+                :max => round(@max, @precision),
+                :med => round(@med, @precision),
+                :sd  => round(@sd, @precision) },
+      :loss => round(@loss, @precision)
     }
   end
 

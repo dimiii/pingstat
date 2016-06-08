@@ -7,6 +7,7 @@ require 'hamster'
 
 include Socket::Constants
 
+# Manages execution of ping thru network with a specified schedule and frequency.
 class PingIO
 
   ICMP_ECHOREPLY = 0
@@ -81,10 +82,6 @@ class PingIO
       unless @selector.nil?
         @selector.wakeup # give a chance to register sockets in pingLoop
         @selector.select { |monitor| monitor.value.call(monitor) }
-        # nio4r selector is a weak chain here - it swallows err events (and does not allow to classify them)
-        # and does not block without timeout (due to err-evt?)
-        # it does not allow to unregister socket on error, created with a good intentions it hides
-        # possibility of batch operations. May be Kernel.select is a better way of operating
       end
     end
 
@@ -131,7 +128,7 @@ class PingIO
     end
 
     if length % 2 > 0
-      check += msg[length-1, 1].unpack('C').first << 8
+      check += msg[length - 1, 1].unpack('C').first << 8
     end
 
     check = (check >> 16) + (check & 0xffff)
@@ -155,7 +152,7 @@ class PingIO
 
     @trash_bag = cleanup_oldest(@trash_bag, @tasks_limit)
 
-    @trash_bag = @trash_bag.map {|socket, task_progress| [socket, task_progress.hop] }
+    @trash_bag = @trash_bag.map { |socket, task_progress| [socket, task_progress.hop] }
   end
 
   def release(socket)
@@ -167,8 +164,8 @@ class PingIO
     reserve = limit / 2 - trash_bag.size
     if reserve < 0
       flatten =  trash_bag.sort_by { |_, task_progress| task_progress.ttl }.flatten(1)
-      outdated_idx = (0...flatten.size).select {|n| n.even? }.to_a[reserve..-1]
-      outdated =  flatten.values_at(*outdated_idx)
+      outdated_idx = (0...flatten.size).select(&:even?).to_a[reserve..-1]
+      outdated = flatten.values_at(*outdated_idx)
 
       unless outdated.empty?
         @logger.warn "Dropped #{outdated.size} items: [#{@trash_bag[outdated[0]]} ...], remains: #{@trash_bag.size}"
